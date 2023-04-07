@@ -24,18 +24,23 @@ const client = new Client({
 //Listener
 client.on("messageCreate", async (message) => {
   //Verify commads
-  if (message.content !== ".play") return;
-  if (!message.member)
-    return message.reply("Este comando não pode ser executado no servidor");
-  if (!message.member.voice || !message.member.voice.channel)
-    return message.reply("Entre em um canal de voz");
+  if (!message.content.startsWith(".play")) {
+    return;
+  }
 
-  //Open a browser
+  if (!message.member) {
+    return message.reply("Este comando não pode ser executado no servidor");
+  }
+
+  if (!message.member.voice || !message.member.voice.channel) {
+    return message.reply("Entre em um canal de voz");
+  }
+
+  //Open browser
   const browser = await launch({
-    defaultViewport: {
-      width: 1920,
-      height: 1080,
-    },
+    executablePath: "/usr/bin/google-chrome-stable",
+    headless: true,
+    args: ["--no-sandbox"],
   });
 
   //Await join in voice channel
@@ -50,21 +55,23 @@ client.on("messageCreate", async (message) => {
   const page = await browser.newPage();
 
   await connection.on(VoiceConnectionStatus.Ready, async () => {
+    const replaceUrl = message.content
+      .split(" ")[1]
+      .replace("youtube", "yout-ube");
+
     try {
       //Await load the page in browser
-      await page.goto("https://www.yout-ube.com/watch?v=WPb6kIKgGt4");
+      await page.goto(replaceUrl);
 
-      await page.evaluate(() => {
-        return document
-          .getElementsByClassName("html5-video-player")[0]
-          ?.click();
-      });
       //Here is the stream audio
       await player.play(
         createAudioResource(
           await getStream(page, { audio: true, video: false })
         )
       );
+
+      await page.waitForSelector(".ytp-large-play-button");
+      await page.click();
     } catch (err) {
       console.error("Error:", err);
     }
